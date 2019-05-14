@@ -10,4 +10,4 @@
 #include "../utils/constants.h"
 #include "../utils/types.h"
 
-void hashGenerator(char *salt, char *password);
+void hashGenerator(char *salt, char *password, char *hash);

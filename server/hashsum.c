@@ -19,11 +19,10 @@
     void err_sys(char *msg);
     void err_msg(char *msg);
 
-    void hashGenerator(char *salt, char *password){
+void hashGenerator(char *salt, char *password, char *hash){
 
         int fd1[2], fd2[2];
         pid_t pid;
-        char hash[HASH_LEN + 1];
         if (pipe(fd1) < 0 || pipe(fd2) < 0)
             err_sys("pipe error");
         if ((pid = fork()) < 0)

@@ -16,7 +16,9 @@ ifdef DEV_INFO
 DEV_FLAGS = -save-temps
 endif
 
-$(foreach TARGET, $(TARGETS), $(eval $(call make_target, $(TARGET))))
+#$(foreach TARGET, $(TARGETS), $(eval $(call make_target, $(TARGET)))) #apagar dps
+server: $(SRCS:.c=.o)
+	$(CC) $(CFLAGS) $(SRCS) -o $@
 
 %.o: %.c 
 	$(CC) $(CFLAGS) $(DEV_FLAGS) -MMD -c $< -o $@
