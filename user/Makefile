@@ -1,7 +1,7 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -pedantic
+CFLAGS=-Wall -Wextra -Werror -pedantic -g
 SRCS = $(wildcard *.c)
-TARGETS = $(patsubst %.c, %, $(wildcard *.c))
+TARGETS = user
 
 define make_target
 $(1): $(1).o
@@ -16,9 +16,10 @@ ifdef DEV_INFO
 DEV_FLAGS = -save-temps
 endif
 
-$(foreach TARGET, $(TARGETS), $(eval $(call make_target, $(TARGET))))
+user: $(SRCS:.c=.o)
+	$(CC) $(CFLAGS) $(SRCS) -o $@
 
-%.o: %.c
+%.o: %.c 
 	$(CC) $(CFLAGS) $(DEV_FLAGS) -MMD -c $< -o $@
 
 clean:
