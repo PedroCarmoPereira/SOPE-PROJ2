@@ -1,7 +1,7 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror -pedantic
+CFLAGS=-Wall -Wextra -Werror -pedantic -g
 SRCS = $(wildcard *.c)
-TARGETS = $(patsubst %.c, %, $(wildcard *.c))
+TARGETS = server
 
 define make_target
 $(1): $(1).o

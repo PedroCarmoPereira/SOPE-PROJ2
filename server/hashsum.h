@@ -11,5 +11,3 @@
 #include "../utils/types.h"
 
 void hashGenerator(char *salt, char *password);
-
-void testPrint();

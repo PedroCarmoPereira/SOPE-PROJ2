@@ -22,49 +22,39 @@
     void hashGenerator(char *salt, char *password){
 
         int fd1[2], fd2[2];
-                pid_t pid;
-                char hash[HASH_LEN];
+        pid_t pid;
+        char hash[HASH_LEN + 1];
+        if (pipe(fd1) < 0 || pipe(fd2) < 0)
+            err_sys("pipe error");
+        if ((pid = fork()) < 0)
+            err_sys("fork error");
 
-                if (pipe(fd1) < 0 || pipe(fd2) < 0)
-                    err_sys("pipe error");
-                if ((pid = fork()) < 0)
-                    err_sys("fork error");
-
-                if (pid == 0) /* child 1 */{
-
-                    close(fd1[WRITE]);
-                    close(fd2[READ]);
-                    dup2(fd1[READ], STDIN_FILENO);
-                    close(fd1[READ]);
-                    dup2(fd2[WRITE], STDOUT_FILENO);
-                    close(fd2[WRITE]);
-
-                    execl("echo", "echo", strcat(password, salt), NULL);
-                    exit(1);
-                }
-                else /*parent*/{
-                    close(fd1[READ]);
-                    close(fd2[WRITE]);
-
-                    write(fd1[WRITE], "This is the data\n", 14);
-                    close(fd1[WRITE]);
-                    read(fd2[READ], hash, HASH_LEN);
-
-                    waitpid(pid, NULL, 0);
-                    close(fd2[READ]);
-                }
-            }
+        if (pid == 0) /* child 1 */{
+            close(fd2[WRITE]);
+            close(fd1[READ]);
+            dup2(fd2[READ], STDIN_FILENO);
+            dup2(fd1[WRITE], STDOUT_FILENO);
+            execlp("sha256sum", "sha256sum", NULL);
+            exit(0);                
+        }
+        
+        else /*parent*/{
+            close(fd1[WRITE]);
+            close(fd2[READ]);
+            write(fd2[WRITE], strcat(password, salt), HASH_LEN);
+            close(fd2[WRITE]);
+            read(fd1[READ], hash, HASH_LEN);
+            hash[HASH_LEN] = '\0';
+            printf("%s\n", hash);
+        }
+    }
             
-            void err_sys(char *msg){
-                fprintf(stderr, "%s\n", msg);
-                exit(1);
-            }
-            void err_msg(char *msg){
-                printf("%s\n", msg);
-                return;
-            }
+void err_sys(char *msg){
+    fprintf(stderr, "%s\n", msg);
+    exit(1);
+}
 
-void testPrint(){
-
-    puts("AAA");
+void err_msg(char *msg){
+    printf("%s\n", msg);
+    return;
 }
