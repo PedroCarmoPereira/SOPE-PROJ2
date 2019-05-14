@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror -pedantic
+CFLAGS=-Wall -Wextra -pedantic
 SRCS = $(wildcard *.c)
 TARGETS = $(patsubst %.c, %, $(wildcard *.c))
 

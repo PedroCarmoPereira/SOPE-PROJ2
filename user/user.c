@@ -6,6 +6,7 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "../utils/constants.h"
 #include "../utils/types.h"
 #include "../utils/sope.h"
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
         printf("args[2] = %s\n", args[2]);
         strcpy(create_acc.password, args[2]);
         req_value.create = create_acc;
-        
+        request.length = sizeof(req_header_t) + sizeof(req_create_account_t);
         
     }
     else if (request.type == OP_TRANSFER)
@@ -144,11 +145,15 @@ int main(int argc, char *argv[])
         transfer.account_id = atoi(args[0]);
         transfer.amount = atoi(args[1]);
         req_value.transfer = transfer;
+        request.length = sizeof(req_header_t) + sizeof(req_transfer_t);
         
     }
+    else request.length = sizeof(req_header_t);
 
     request.value = req_value;
-    request.length = sizeof(req_value);
 
-    
+    int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY | O_NONBLOCK);
+
+    write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
+
 }

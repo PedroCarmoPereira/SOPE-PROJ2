@@ -46,5 +46,4 @@ int main(int argc, char *argv[]){
     printf("ola\n");
     hashGenerator(admin_acc.salt, argv[2], admin_acc.hash);
     
-
 }
