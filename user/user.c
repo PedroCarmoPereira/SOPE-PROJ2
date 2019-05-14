@@ -6,9 +6,9 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
-#include "constants.h"
-#include "types.h"
-#include "sope.h"
+#include "../utils/constants.h"
+#include "../utils/types.h"
+#include "../utils/sope.h"
 
 int main(int argc, char *argv[])
 {
@@ -30,8 +30,21 @@ int main(int argc, char *argv[])
     strcpy(fifo_name, USER_FIFO_PATH_PREFIX);
     mkfifo( strcat(fifo_name, str_pid) , 0666);
     op_type_t type;
-    //char* args = argv[5];
+
     
+    char* listofargs = argv[5];
+
+    int i = 0;
+    char *p = strtok (listofargs, " ");
+    char *args[3];
+
+    while (p != NULL)
+    {
+        args[i++] = p;
+        p = strtok (NULL, " ");
+    }
+    
+   
     switch (atoi(argv[4]))
     {
     case 0:
@@ -47,8 +60,8 @@ int main(int argc, char *argv[])
         type = OP_SHUTDOWN;
         break;
     }
+
     
-    /*
     if (type == OP_CREATE_ACCOUNT){
         if(strlen(args[0]) > WIDTH_ACCOUNT){
             printf("The account id's width must be at max 4 characters!\n");
@@ -62,7 +75,7 @@ int main(int argc, char *argv[])
             printf("The account id must be a number between 1 and 4096!\n");
             return -1;
         }
-        if(atoi(args[1] < MIN_BALANCE || atoi(args[1] > MAX_BALANCE))){
+        if(strtoul(args[1], NULL, 10) < MIN_BALANCE || strtoul(args[1], NULL, 10) > MAX_BALANCE){
             printf("The balance must be a number between 1 and 1000000000!\n");
             return -1;
         }
@@ -81,24 +94,24 @@ int main(int argc, char *argv[])
             printf("The amount to transfer width must be at max 10 characters!\n");
             return -1;
         }
-        if(atoi(args[0]) < 1 || atoi(args[0] >= MAX_BANK_ACCOUNTS)){
+        if(atoi(args[0]) < 1 || atoi(args[0]) >= MAX_BANK_ACCOUNTS){
             printf("The account id must be a number between 1 and 4096!\n");
             return -1;
         }
-        if(atoi(args[1] < 1 || atoi(args[1] > MAX_BALANCE))){
+        if(atoi(args[1]) < 1 || strtoul(args[1], NULL, 10) > MAX_BALANCE){
             printf("The amount to transfer must be a number between 1 and 1000000000!\n");
             return -1;
         }
     }
     
-
+    
     if(type == OP_BALANCE || type == OP_SHUTDOWN ){
-        if(strlen(args) != 0){
+        if(strlen(listofargs) != 0){
             printf("This operation accepts no arguments!\n");
             return -1;
         }
     }
-    */
+    
 
     tlv_request_t request;
     request.type = type;
@@ -106,7 +119,7 @@ int main(int argc, char *argv[])
     req_header_t req_header;
     req_header.pid = getpid();
     req_header.account_id = atoi(argv[1]);
-    req_header.password[MAX_PASSWORD_LEN + 1] = *argv[2];
+    strcpy(req_header.password, argv[2]);
     req_header.op_delay_ms = atoi(argv[3]);
 
     req_value_t req_value;
@@ -114,24 +127,28 @@ int main(int argc, char *argv[])
 
     if (request.type == OP_CREATE_ACCOUNT)
     {
-        /*
+        
         req_create_account_t create_acc;
         create_acc.account_id = atoi(args[0]);
         create_acc.balance = atoi(args[1]);
-        create_acc.password[MAX_PASSWORD_LEN + 1] = args[2];
+        printf("args[2] = %s\n", args[2]);
+        strcpy(create_acc.password, args[2]);
         req_value.create = create_acc;
-        */
+        
+        
     }
     else if (request.type == OP_TRANSFER)
     {
-        /*
+        
         req_transfer_t transfer;
         transfer.account_id = atoi(args[0]);
         transfer.amount = atoi(args[1]);
         req_value.transfer = transfer;
-        */
+        
     }
 
     request.value = req_value;
     request.length = sizeof(req_value);
+
+    
 }
