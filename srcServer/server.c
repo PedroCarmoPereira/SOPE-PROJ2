@@ -41,6 +41,13 @@ void create_admin_acc(char *password){
     hashGenerator(admin_acc.salt, password, admin_acc.hash);
 }
 
+bool verifyAccount(uint32_t id, char * password, bank_account_t account){
+    char hash[HASH_LEN + 1];
+    hashGenerator(account.salt, password, hash);
+    if(id == account.account_id && strcmp(hash, account.hash) == 0) return true;
+    return false;
+}
+
 int main(int argc, char *argv[]){
 
     if(argc != 3){
