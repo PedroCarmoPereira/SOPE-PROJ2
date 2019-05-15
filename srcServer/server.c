@@ -8,6 +8,7 @@
 #include "hashsum.h"
 #include <fcntl.h>
 #include "string.h"
+#include "requestQueue.h"
 #include "../utils/constants.h"
 #include "../utils/types.h"
 #include "../utils/sope.h"
@@ -59,29 +60,28 @@ int main(int argc, char *argv[]){
         printf("The number of bank offices must be at max 99!\n");
         return -1;
     }
+    create_admin_acc(argv[2]);
 
+    reqQ_t *requestQueue = createQueue();
     
     if(mkfifo(SERVER_FIFO_PATH, 0666) == -1){
         exit(8);
     }  
-    
-    create_admin_acc(argv[2]);
-
 
     int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
     if(serverFifo == -1){
         return -1;
     }
     
-    for(int i = 1; i <= atoi(argv[1]); i++){
-       // printf("ola\n");
-        pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
-    }
+    for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
     
     while(true){
         printf("estou a ler \n");
         tlv_request_t request;
         read(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t));
     }
-    
+
+
+    close(serverFifo);
+    unlink(SERVER_FIFO_PATH);
 }
