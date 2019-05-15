@@ -132,7 +132,6 @@ int main(int argc, char *argv[])
         req_create_account_t create_acc;
         create_acc.account_id = atoi(args[0]);
         create_acc.balance = atoi(args[1]);
-        printf("args[2] = %s\n", args[2]);
         strcpy(create_acc.password, args[2]);
         req_value.create = create_acc;
         request.length = sizeof(req_header_t) + sizeof(req_create_account_t);
