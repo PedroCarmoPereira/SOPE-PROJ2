@@ -17,7 +17,6 @@ pthread_t bankoffice[MAX_BANK_OFFICES];
 bank_account_t bankaccounts[MAX_BANK_ACCOUNTS];
 
 void *officeprocessing(void *arg){
-    printf("ola");
     int *i = (int*)arg;
     i++;
     pthread_exit(0);
@@ -68,17 +67,24 @@ int main(int argc, char *argv[]){
         exit(8);
     }  
 
-    int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY);
     if(serverFifo == -1){
         return -1;
     }
     
     for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
     
-    while(true){
-        printf("estou a ler \n");
+    int i = 0;
+    while(i < 3){
         tlv_request_t request;
+        req_value_t val;
         read(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t));
+        read(serverFifo, &val, sizeof(req_value_t));
+        request.value = val;
+        enQueue(requestQueue, request);
+        printf("READ\n TYPE:%d\n LENGHT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length);
+        deQueue(requestQueue);
+        i++;
     }
 
 

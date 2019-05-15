@@ -32,11 +32,8 @@ int main(int argc, char *argv[])
     mkfifo( strcat(fifo_name, str_pid) , 0666);
     op_type_t type;
 
-    
-    char* listofargs = argv[5];
-
     int i = 0;
-    char *p = strtok (listofargs, " ");
+    char *p = strtok (argv[5], " ");
     char *args[3];
 
     while (p != NULL)
@@ -107,7 +104,7 @@ int main(int argc, char *argv[])
     
     
     if(type == OP_BALANCE || type == OP_SHUTDOWN ){
-        if(strlen(listofargs) != 0){
+        if(strlen(argv[5]) != 0){
             printf("This operation accepts no arguments!\n");
             return -1;
         }
@@ -151,8 +148,9 @@ int main(int argc, char *argv[])
 
     request.value = req_value;
 
-    int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY | O_NONBLOCK);
+    int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY);
 
     write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
-
+    //close(serverFifo);
+    return 0;
 }
