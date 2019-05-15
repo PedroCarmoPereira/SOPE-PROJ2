@@ -1,10 +1,14 @@
 all:
-	+$(MAKE) -C server
-	+$(MAKE) -C user
+	+$(MAKE) -C srcServer
+	mv srcServer/server .;
+	+$(MAKE) -C srcUser
+	mv srcUser/user .;
 
 .PHONY: all clean
 
 clean:
-	+$(MAKE) -C server clean
-	+$(MAKE) -C user clean
+	+$(MAKE) -C srcServer clean
+	+$(MAKE) -C srcUser clean
+	rm server;
+	rm user;
 

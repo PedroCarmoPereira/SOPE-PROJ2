@@ -23,6 +23,13 @@ char* saltGenerator(char *salt){
     return salt;
 }
 
+bool verifyAccount(uint32_t id, char * password, bank_account_t account){
+    char hash[HASH_LEN + 1];
+    hashGenerator(account.salt, password, hash);
+    if(id == account.account_id && strcmp(hash, account.hash) == 0) return true;
+    return false;
+}
+
 int main(int argc, char *argv[]){
 
     if(argc != 3){
@@ -36,14 +43,13 @@ int main(int argc, char *argv[]){
     }
 
     mkfifo(SERVER_FIFO_PATH, 0666);
+
     bank_account_t admin_acc;
+    //bank_account_t accounts[MAX_BANK_ACCOUNTS];
+
     admin_acc.account_id = ADMIN_ACCOUNT_ID;
     admin_acc.balance = 0;
-
-
     saltGenerator(admin_acc.salt);
-
-    printf("ola\n");
     hashGenerator(admin_acc.salt, argv[2], admin_acc.hash);
-    
+    return 0;
 }
