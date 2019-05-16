@@ -7,6 +7,7 @@
 #include <errno.h>
 #include "hashsum.h"
 #include <fcntl.h>
+#include <semaphore.h>
 #include "string.h"
 #include "requestQueue.h"
 #include "../utils/constants.h"
@@ -15,11 +16,16 @@
     
 bank_account_t admin_acc;
 pthread_t bankoffice[MAX_BANK_OFFICES];
-bank_account_t bankaccounts[MAX_BANK_ACCOUNTS];
+account_mutex_t bankaccounts[MAX_BANK_ACCOUNTS];
+sem_t full, empty;
 
-void *officeprocessing(void *arg){
-    int *i = (int*)arg;
-    i++;
+#define SHARED  0
+
+void *officeprocessing(void *requestQueue){
+    sem_wait(&full);
+    reqQ_node_t * node = deQueue((reqQ_t *)requestQueue);
+    printf("Request Type: %d\n", node->key.type);
+    sem_post(&empty);
     pthread_exit(0);
 }
 
@@ -66,13 +72,16 @@ int main(int argc, char *argv[]){
     }
     create_admin_acc(argv[2]);
 
+    sem_init(&empty, SHARED, 1);
+    sem_init(&full, SHARED, 0);
+
     reqQ_t *requestQueue = createQueue();
     
     if(mkfifo(SERVER_FIFO_PATH, 0666) == -1){
         exit(8);
     }  
 
-    int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY);
+    int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
     if(serverFifo == -1){
         return -1;
     }
@@ -80,23 +89,25 @@ int main(int argc, char *argv[]){
     int dummyFifo = open(SERVER_FIFO_PATH, O_WRONLY);
     if (dummyFifo == -1) return -2;
     
-    for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
+    for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, requestQueue);
     tlv_request_t request;
     request.type = 0;
+    bool terminate = false;
     do{
         int bytesRead;
         bytesRead = read(serverFifo, &request.type, sizeof(op_type_t));
         if(bytesRead > 0){
+            sem_wait(&empty);
             read(serverFifo, &request.length, sizeof(uint32_t));
             read(serverFifo, &request.value, request.length);
-            enQueue(requestQueue, request);
-            reqQ_node_t *node = deQueue(requestQueue);
-            free(node);
-            printf("Ping: %d\n", request.type);
+            if(!terminationRequest(request)) enQueue(requestQueue, request);
+            else terminate = true;
+            sem_post(&full);
         }
-    }while(!terminationRequest(request));
+    }while(!terminate);
 
     //TODO: DIZER QUE ESPERE PELA TERMINAÇÃO DOS THREADS
     close(serverFifo);
+    close(dummyFifo);
     unlink(SERVER_FIFO_PATH);
 }

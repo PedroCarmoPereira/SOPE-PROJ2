@@ -60,6 +60,12 @@ typedef struct bank_account {
   uint32_t balance;
 } bank_account_t;
 
+typedef struct account_mutex{
+  bank_account_t account;
+  pthread_mutex_t mutex;
+} account_mutex_t;
+
+
 //
 //
 // Request message related types.
