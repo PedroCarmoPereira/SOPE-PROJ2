@@ -77,13 +77,14 @@ int main(int argc, char *argv[]){
     int i = 0;
     while(i < 3){
         tlv_request_t request;
-        req_value_t val;
-        read(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t));
-        read(serverFifo, &val, sizeof(req_value_t));
-        request.value = val;
+        //if(i > 0) printf("READ\n TYPE:%d\n LENGHT:%d\n ID:%d\t AMMOUNT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length, requestQueue->front->key.value.header.account_id, requestQueue->front->key.value.transfer.amount);
+        read(serverFifo, &request.type, sizeof(op_type_t));
+        read(serverFifo, &request.length, sizeof(uint32_t));
+        read(serverFifo, &request.value, request.length);
         enQueue(requestQueue, request);
-        printf("READ\n TYPE:%d\n LENGHT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length);
-        deQueue(requestQueue);
+        printf("READ\n TYPE:%d\n LENGHT:%d\n ID:%d\t AMMOUNT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length, requestQueue->front->key.value.header.account_id, requestQueue->front->key.value.transfer.amount);
+        reqQ_node_t *node = deQueue(requestQueue);
+        free(node);
         i++;
     }
 
