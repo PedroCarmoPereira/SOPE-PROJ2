@@ -12,7 +12,8 @@
 #include "../utils/constants.h"
 #include "../utils/types.h"
 #include "../utils/sope.h"
-
+    
+bank_account_t admin_acc;
 pthread_t bankoffice[MAX_BANK_OFFICES];
 bank_account_t bankaccounts[MAX_BANK_ACCOUNTS];
 
@@ -34,7 +35,6 @@ void saltGenerator(char *salt){
 }
 
 void create_admin_acc(char *password){
-    bank_account_t admin_acc;
     admin_acc.account_id = ADMIN_ACCOUNT_ID;
     admin_acc.balance = 0;
     saltGenerator(admin_acc.salt);
@@ -45,6 +45,11 @@ bool verifyAccount(uint32_t id, char * password, bank_account_t account){
     char hash[HASH_LEN + 1];
     hashGenerator(account.salt, password, hash);
     if(id == account.account_id && strcmp(hash, account.hash) == 0) return true;
+    return false;
+}
+
+bool terminationRequest(tlv_request_t request){
+    if (request.type == OP_SHUTDOWN && verifyAccount(request.value.header.account_id, request.value.header.password, admin_acc)) return true;
     return false;
 }
 
@@ -76,10 +81,9 @@ int main(int argc, char *argv[]){
     if (dummyFifo == -1) return -2;
     
     for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
-    
-    int i = 0;
-    while(i < 3){
-        tlv_request_t request;
+    tlv_request_t request;
+    request.type = 0;
+    do{
         int bytesRead;
         bytesRead = read(serverFifo, &request.type, sizeof(op_type_t));
         if(bytesRead > 0){
@@ -88,11 +92,11 @@ int main(int argc, char *argv[]){
             enQueue(requestQueue, request);
             reqQ_node_t *node = deQueue(requestQueue);
             free(node);
-            i++;
+            printf("Ping: %d\n", request.type);
         }
-    }
+    }while(!terminationRequest(request));
 
-
+    //TODO: DIZER QUE ESPERE PELA TERMINAÇÃO DOS THREADS
     close(serverFifo);
     unlink(SERVER_FIFO_PATH);
 }
