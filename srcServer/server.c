@@ -71,21 +71,25 @@ int main(int argc, char *argv[]){
     if(serverFifo == -1){
         return -1;
     }
+
+    int dummyFifo = open(SERVER_FIFO_PATH, O_WRONLY);
+    if (dummyFifo == -1) return -2;
     
     for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, NULL);
     
     int i = 0;
     while(i < 3){
         tlv_request_t request;
-        //if(i > 0) printf("READ\n TYPE:%d\n LENGHT:%d\n ID:%d\t AMMOUNT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length, requestQueue->front->key.value.header.account_id, requestQueue->front->key.value.transfer.amount);
-        read(serverFifo, &request.type, sizeof(op_type_t));
-        read(serverFifo, &request.length, sizeof(uint32_t));
-        read(serverFifo, &request.value, request.length);
-        enQueue(requestQueue, request);
-        printf("READ\n TYPE:%d\n LENGHT:%d\n ID:%d\t AMMOUNT:%d\n", requestQueue->front->key.type, requestQueue->front->key.length, requestQueue->front->key.value.header.account_id, requestQueue->front->key.value.transfer.amount);
-        reqQ_node_t *node = deQueue(requestQueue);
-        free(node);
-        i++;
+        int bytesRead;
+        bytesRead = read(serverFifo, &request.type, sizeof(op_type_t));
+        if(bytesRead > 0){
+            read(serverFifo, &request.length, sizeof(uint32_t));
+            read(serverFifo, &request.value, request.length);
+            enQueue(requestQueue, request);
+            reqQ_node_t *node = deQueue(requestQueue);
+            free(node);
+            i++;
+        }
     }
 
 
