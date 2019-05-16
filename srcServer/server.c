@@ -16,17 +16,16 @@
     
 bank_account_t admin_acc;
 pthread_t bankoffice[MAX_BANK_OFFICES];
-account_mutex_t bankaccounts[MAX_BANK_ACCOUNTS];
+account_mutex_t bankaccounts[MAX_BANK_ACCOUNTS] = {{.account.account_id = 4097}};
 sem_t full, empty;
 
 #define SHARED  0
 
-void *officeprocessing(void *requestQueue){
-    sem_wait(&full);
-    reqQ_node_t * node = deQueue((reqQ_t *)requestQueue);
-    printf("Request Type: %d\n", node->key.type);
-    sem_post(&empty);
-    pthread_exit(0);
+bool verifyAccount(uint32_t id, char * password, bank_account_t account){
+    char hash[HASH_LEN + 1];
+    hashGenerator(account.salt, password, hash);
+    if(id == account.account_id && strcmp(hash, account.hash) == 0) return true;
+    return false;
 }
 
 void saltGenerator(char *salt){
@@ -40,18 +39,45 @@ void saltGenerator(char *salt){
 
 }
 
+ret_code_t create_account(req_value_t rval){
+    if(!verifyAccount(rval.header.account_id, rval.header.password, admin_acc)){
+        if(rval.header.account_id != ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
+        else return RC_LOGIN_FAIL;
+    }
+
+    /*account_mutex_t newMut;
+    if(bankaccounts[rval.create.account_id].account.account_id == 4097){
+        newMut.account.account_id = rval.create.account_id;
+        newMut.account.balance = rval.create.balance;
+        saltGenerator(newMut.account.salt);
+        hashGenerator(newMut.account.salt, rval.create.password, newMut.account.hash);
+        pthread_mutex_init(&newMut.mutex, NULL);
+        bankaccounts[newMut.account.account_id] = newMut;
+        //É AQUI QUE DÁ MERDA
+    }*/
+
+    return RC_ID_IN_USE;
+}
+
+void *officeprocessing(void *requestQueue){
+    sem_wait(&full);
+    reqQ_node_t * node = deQueue((reqQ_t *)requestQueue);
+    switch (node->key.type){
+    case 0:
+        create_account(node->key.value);
+        break;
+    default:
+        break;
+    }
+    sem_post(&empty);
+    pthread_exit(0);
+}
+
 void create_admin_acc(char *password){
     admin_acc.account_id = ADMIN_ACCOUNT_ID;
     admin_acc.balance = 0;
     saltGenerator(admin_acc.salt);
     hashGenerator(admin_acc.salt, password, admin_acc.hash);
-}
-
-bool verifyAccount(uint32_t id, char * password, bank_account_t account){
-    char hash[HASH_LEN + 1];
-    hashGenerator(account.salt, password, hash);
-    if(id == account.account_id && strcmp(hash, account.hash) == 0) return true;
-    return false;
 }
 
 bool terminationRequest(tlv_request_t request){
