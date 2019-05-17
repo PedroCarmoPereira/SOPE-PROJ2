@@ -38,14 +38,18 @@ void hashGenerator(char *salt, char *password, char *hash){
         }
         
         else /*parent*/{
+            char temp_pass[HASH_LEN + MAX_PASSWORD_LEN + 1];
+            strcpy(temp_pass, password);
+            strcat(temp_pass, salt);
             close(fd1[WRITE]);
             close(fd2[READ]);
-            write(fd2[WRITE], strcat(password, salt), HASH_LEN);
+            write(fd2[WRITE], temp_pass, HASH_LEN);
             close(fd2[WRITE]);
+            wait(NULL);
             read(fd1[READ], hash, HASH_LEN);
             hash[HASH_LEN] = '\0';
         }
-    }
+}
             
 void err_sys(char *msg){
     fprintf(stderr, "%s\n", msg);
