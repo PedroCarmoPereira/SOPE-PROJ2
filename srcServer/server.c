@@ -165,8 +165,7 @@ void *officeprocessing(void *requestQueue)
     free(node);
     activeThreads--;
     logReply(server_log_file, pthread_self(), &reply);
-    int did_write = write(user_fifo, &reply, reply.length);
-    printf("WROTE ON FIFO: %d\nWAS SUPPOSED TO WRITE: %d\n", did_write, reply.length);
+    write(user_fifo, &reply, reply.length);
     sem_post(&empty);
     return 0;
 }

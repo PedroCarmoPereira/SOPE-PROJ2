@@ -162,8 +162,10 @@ int main(int argc, char *argv[])
     tlv_reply_t reply;
 
     do {
-        bytesRead = read(userFifo, &reply.length, sizeof(uint32_t));
-        read(userFifo, &reply.value, reply.length);
+        bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
+        bytesRead += read(userFifo, &reply.length, sizeof(uint32_t));
+        bytesRead += read(userFifo, &reply.value, reply.length);
+        printf("BYTES SUPPOSEDELY READ: %d\n", bytesRead);
     }while(!bytesRead);
 
     int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
