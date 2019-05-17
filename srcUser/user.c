@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY);
 
     write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
-/*
+    
     int userFifo = open(fifo_name, O_RDONLY);
     int dummyFifo = open(fifo_name, O_WRONLY);
     if (dummyFifo == -1)
@@ -159,12 +159,18 @@ int main(int argc, char *argv[])
 
     int bytesRead = 0;
 
-    do {
-        read(userFifo, &request.length, sizeof(uint32_t));
-        read(userFifo, &request.value, request.length);
-    }while(!bytesRead)*/
+    tlv_reply_t reply;
 
+    do {
+        bytesRead = read(userFifo, &reply.length, sizeof(uint32_t));
+        read(userFifo, &reply.value, reply.length);
+    }while(!bytesRead);
+
+    int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
+    int did_write = logReply(fp, getpid(), &reply);
+    printf("WROTE: %d bytes \n", did_write);
+    close(fp);
     unlink(fifo_name);
-    //close(serverFifo);
+    close(serverFifo);
     return 0;
 }

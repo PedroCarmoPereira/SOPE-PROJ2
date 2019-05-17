@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Werror -pedantic -g -D_REENTRAT -pthread -lrt
-SRCS = $(wildcard *.c)
+SRCS = $(wildcard *.c) ../utils/log.c
 TARGETS = server
 
 define make_target
