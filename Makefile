@@ -11,4 +11,4 @@ clean:
 	+$(MAKE) -C srcUser clean
 	rm server;
 	rm user;
-
+	rm ./utils/*.o ./utils/*.d

@@ -24,6 +24,6 @@ server: $(SRCS:.c=.o)
 	$(CC) $(CFLAGS) $(DEV_FLAGS) -MMD -c $< -o $@
 
 clean:
-	rm -f $(TARGETS) *.o *.d *.i *.s
+	rm -f $(TARGETS) *.o *.d *.i *.s;
 
 -include $(TARGETS:=.d)
