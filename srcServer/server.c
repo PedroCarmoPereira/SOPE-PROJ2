@@ -47,6 +47,7 @@ ret_code_t create_account(req_value_t rval)
     if (rval.header.account_id != ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
+
     account_mutex_t newMut;
     if (bankaccounts[rval.create.account_id].account.hash[0] == '\0')
     {   
@@ -61,12 +62,50 @@ ret_code_t create_account(req_value_t rval)
     else return RC_ID_IN_USE;
 }
 
-ret_code_t terminationRequest(tlv_request_t request)
+ret_code_t check_balance(req_value_t rval)
 {
-    if (request.value.header.account_id != ADMIN_ACCOUNT_ID)
+    if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
+
+    if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
+
+    pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
+    printf("BALANCE: %d\n", bankaccounts[rval.header.account_id].account.balance);
+    pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
+    return RC_OK;
+}
+
+ret_code_t transfer_operation(req_value_t rval)
+{
+
+    if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
+
+    if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
+
+    if(rval.transfer.account_id == rval.header.account_id) return RC_SAME_ID;
+
+    if (bankaccounts[rval.transfer.account_id].account.hash[0] == '\0') return RC_ID_NOT_FOUND;
+
+    pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
+    pthread_mutex_lock(&bankaccounts[rval.transfer.account_id].mutex);
+
+    if(rval.transfer.amount > bankaccounts[rval.header.account_id].account.balance) return RC_NO_FUNDS;
+
+    if (bankaccounts[rval.transfer.account_id].account.balance + rval.transfer.amount > MAX_BALANCE) return RC_TOO_HIGH;
+
+    bankaccounts[rval.header.account_id].account.balance -= rval.transfer.amount;
+    bankaccounts[rval.transfer.account_id].account.balance += rval.transfer.amount;
+
+    pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
+    pthread_mutex_unlock(&bankaccounts[rval.transfer.account_id].mutex);
+    return RC_OK;
+}
+
+ret_code_t terminationRequest(req_value_t rval)
+{
+    if (rval.header.account_id != ADMIN_ACCOUNT_ID)
         return RC_OP_NALLOW;
 
-    if (!verifyAccount(request.value.header.account_id, request.value.header.password))
+    if (!verifyAccount(rval.header.account_id, rval.header.password))
         return RC_LOGIN_FAIL;
     
     else {
@@ -86,8 +125,16 @@ void *officeprocessing(void *requestQueue)
         reply = create_account(node->key.value);
         printf("REPLY: %d\n", reply);
         break;
+    case 1:
+        reply = check_balance(node->key.value);
+        printf("REPLY: %d\n", reply);
+        break;
+    case 2:
+        reply = transfer_operation(node->key.value);
+        printf("REPLY: %d\n", reply);
+        break;
     case 3:
-        reply = terminationRequest(node->key);
+        reply = terminationRequest(node->key.value);
         printf("REPLY: %d\n", reply);
         break;
     default:
@@ -123,7 +170,7 @@ int main(int argc, char *argv[])
     }
     create_admin_acc(argv[2]);
 
-    sem_init(&empty, SHARED, 1);
+    sem_init(&empty, SHARED, atoi(argv[1]));
     sem_init(&full, SHARED, 0);
 
     reqQ_t *requestQueue = createQueue();

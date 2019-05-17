@@ -151,6 +151,20 @@ int main(int argc, char *argv[])
     int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY);
 
     write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
+/*
+    int userFifo = open(fifo_name, O_RDONLY);
+    int dummyFifo = open(fifo_name, O_WRONLY);
+    if (dummyFifo == -1)
+        return -2;
+
+    int bytesRead = 0;
+
+    do {
+        read(userFifo, &request.length, sizeof(uint32_t));
+        read(userFifo, &request.value, request.length);
+    }while(!bytesRead)*/
+
+    unlink(fifo_name);
     //close(serverFifo);
     return 0;
 }
