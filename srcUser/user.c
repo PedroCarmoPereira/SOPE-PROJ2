@@ -153,9 +153,9 @@ int main(int argc, char *argv[])
     write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
     
     int userFifo = open(fifo_name, O_RDONLY);
-    int dummyFifo = open(fifo_name, O_WRONLY);
+    /*int dummyFifo = open(fifo_name, O_WRONLY);
     if (dummyFifo == -1)
-        return -2;
+        return -2;*/
 
     int bytesRead = 0;
 
