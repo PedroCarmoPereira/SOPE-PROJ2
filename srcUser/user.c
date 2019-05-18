@@ -165,12 +165,10 @@ int main(int argc, char *argv[])
         bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
         bytesRead += read(userFifo, &reply.length, sizeof(uint32_t));
         bytesRead += read(userFifo, &reply.value, reply.length);
-        printf("BYTES SUPPOSEDELY READ: %d\n", bytesRead);
     }while(!bytesRead);
 
     int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
     int did_write = logReply(fp, getpid(), &reply);
-    printf("WROTE: %d bytes \n", did_write);
     close(fp);
     unlink(fifo_name);
     close(serverFifo);
