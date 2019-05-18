@@ -167,9 +167,9 @@ int main(int argc, char *argv[])
         bytesRead += read(userFifo, &reply.value, reply.length);
     }while(!bytesRead);
 
-    int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
-    //int did_write = logReply(fp, getpid(), &reply);
-    close(fp);
+    /*int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
+    int did_write = logReply(fp, getpid(), &reply);
+    close(fp);*/
     unlink(fifo_name);
     close(serverFifo);
     return 0;

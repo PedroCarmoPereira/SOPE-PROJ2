@@ -113,19 +113,26 @@ ret_code_t terminationRequest(req_value_t rval)
     
     else {
         terminate = true;
+        for (unsigned int i = 0; i < activeThreads; i++) sem_post(&full);
         return RC_OK;
     }
 }
 
 void *officeprocessing(void *requestQueue)
 {
-    do{
+    while (!terminate){
         sem_wait(&full);
+        if(((reqQ_t *) requestQueue)->front == NULL && terminate) {
+            sem_post(&full);
+            sem_post(&empty);
+            break;
+        }
+        if(((reqQ_t *) requestQueue)->front == NULL) continue;
         activeThreads++;
         reqQ_node_t *node = deQueue((reqQ_t *)requestQueue);
         tlv_reply_t reply;
-        char str_pid[WIDTH_ID];
-        char fifo_name[USER_FIFO_PATH_LEN];
+        char str_pid[WIDTH_ID + 1];
+        char fifo_name[USER_FIFO_PATH_LEN + 1];
         sprintf(str_pid, "%d", node->key.value.header.pid);
         strcpy(fifo_name, USER_FIFO_PATH_PREFIX);
         strcat(fifo_name, str_pid);
@@ -165,16 +172,13 @@ void *officeprocessing(void *requestQueue)
         default:
             break;
         }
-
         free(node);
         activeThreads--;
         logReply(server_log_file, pthread_self(), &reply);
         write(user_fifo, &reply, sizeof(op_type_t) + sizeof(uint32_t) + reply.length);
         sem_post(&empty);
-
-    } while (!terminate);
-    
-    return 0;
+    }
+    pthread_exit(0);
 }
 
 void create_admin_acc(char *password)
@@ -229,7 +233,7 @@ int main(int argc, char *argv[])
         return -2;
 
 
-    for(int i = 1; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, requestQueue);
+    for(int i = 0; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, requestQueue);
     tlv_request_t request;
     request.type = 0;
     do
@@ -247,8 +251,9 @@ int main(int argc, char *argv[])
         }
     } while (!terminate);
 
-    //TODO: DIZER QUE ESPERE PELA TERMINAÇÃO DOS THREADS
+    for(int i = 0; i <= atoi(argv[1]); i++) pthread_join(bankoffice[i], NULL);
     close(serverFifo);
     close(dummyFifo);
     unlink(SERVER_FIFO_PATH);
+    return 0;
 }
