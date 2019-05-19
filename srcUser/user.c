@@ -86,6 +86,10 @@ int main(int argc, char *argv[])
     }
 
     if(type == OP_TRANSFER){
+        if (!args[0]) {
+            printf("The transfer op is missing the destination account id and value to be transfered");
+            return -5;
+        }
         if(strlen(args[0]) > WIDTH_ACCOUNT){
             printf("The account id's width must be at max 4 characters!\n");
             return -1;
