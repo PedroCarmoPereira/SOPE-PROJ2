@@ -2,7 +2,7 @@
 #define REQUEST_QUEUE
 
 #include <stdlib.h>
-#include "../utils/types.h"
+#include "types.h"
 
 typedef struct reqQ_node{
     tlv_request_t key;

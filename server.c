@@ -10,9 +10,9 @@
 #include <semaphore.h>
 #include "string.h"
 #include "requestQueue.h"
-#include "../utils/constants.h"
-#include "../utils/types.h"
-#include "../utils/sope.h"
+#include "constants.h"
+#include "types.h"
+#include "sope.h"
 
 pthread_t bankoffice[MAX_BANK_OFFICES];
 account_mutex_t bankaccounts[MAX_BANK_ACCOUNTS];

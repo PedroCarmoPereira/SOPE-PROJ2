@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "../utils/constants.h"
-#include "../utils/types.h"
+#include "constants.h"
+#include "types.h"
 
 void hashGenerator(char *salt, char *password, char *hash);

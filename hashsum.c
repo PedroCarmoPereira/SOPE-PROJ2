@@ -7,9 +7,9 @@
     #include <errno.h>
     #include <sys/wait.h>
     #include "string.h"
-    #include "../utils/constants.h"
-    #include "../utils/types.h"
-    #include "../utils/sope.h"
+    #include "constants.h"
+    #include "types.h"
+    #include "sope.h"
     #include "hashsum.h"
 
     #define READ 0

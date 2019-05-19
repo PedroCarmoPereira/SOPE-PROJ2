@@ -8,9 +8,9 @@
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "../utils/constants.h"
-#include "../utils/types.h"
-#include "../utils/sope.h"
+#include "constants.h"
+#include "types.h"
+#include "sope.h"
 
 int main(int argc, char *argv[])
 {
