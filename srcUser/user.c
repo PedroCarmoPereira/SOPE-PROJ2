@@ -169,13 +169,15 @@ int main(int argc, char *argv[])
 
     do {
         bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
-        bytesRead += read(userFifo, &reply.length, sizeof(uint32_t));
-        bytesRead += read(userFifo, &reply.value, reply.length);
+        if(bytesRead){
+            read(userFifo, &reply.length, sizeof(uint32_t));
+            read(userFifo, &reply.value, reply.length);
+        }
     }while(!bytesRead);
 
-    /*int fp = open(USER_LOGFILE, O_CREAT | O_APPEND, 0666);
-    int did_write = logReply(fp, getpid(), &reply);
-    close(fp);*/
+    int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
+    int bytesWritten = logReply(fp, getpid(), &reply);
+    close(fp);
     unlink(fifo_name);
     close(serverFifo);
     return 0;
