@@ -102,9 +102,17 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
 
-    if(rval.transfer.amount > bankaccounts[rval.header.account_id].account.balance) return RC_NO_FUNDS;
+    if(rval.transfer.amount > bankaccounts[rval.header.account_id].account.balance){
+        pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
+        pthread_mutex_unlock(&bankaccounts[rval.transfer.account_id].mutex);
+        return RC_NO_FUNDS;
+    }
 
-    if (bankaccounts[rval.transfer.account_id].account.balance + rval.transfer.amount > MAX_BALANCE) return RC_TOO_HIGH;
+    if (bankaccounts[rval.transfer.account_id].account.balance + rval.transfer.amount > MAX_BALANCE){
+        pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
+        pthread_mutex_unlock(&bankaccounts[rval.transfer.account_id].mutex);
+        return RC_TOO_HIGH;
+    }
 
     bankaccounts[rval.header.account_id].account.balance -= rval.transfer.amount;
     bankaccounts[rval.transfer.account_id].account.balance += rval.transfer.amount;
