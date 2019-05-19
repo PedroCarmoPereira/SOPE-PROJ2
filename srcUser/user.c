@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
     }while(!bytesRead);
 
     int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
-    int bytesWritten = logReply(fp, getpid(), &reply);
+    logReply(fp, getpid(), &reply);
     close(fp);
     unlink(fifo_name);
     close(serverFifo);
