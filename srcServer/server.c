@@ -62,6 +62,7 @@ ret_code_t create_account(req_value_t rval)
         hashGenerator(newMut.account.salt, rval.create.password, newMut.account.hash);
         pthread_mutex_init(&newMut.mutex, NULL);
         bankaccounts[newMut.account.account_id] = newMut;
+        logAccountCreation(server_log_file, MAIN_THREAD_ID, &newMut.account);
         return RC_OK;
     }
     else return RC_ID_IN_USE;
