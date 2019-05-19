@@ -192,7 +192,6 @@ void *officeprocessing(void *requestQueue)
         free(node);
         activeThreads--;
         logReply(server_log_file, pthread_self(), &reply);
-        sleep(35);
         write(user_fifo, &reply, sizeof(op_type_t) + sizeof(uint32_t) + reply.length);
         sem_post(&empty);
     }
