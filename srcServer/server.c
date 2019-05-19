@@ -170,6 +170,9 @@ void *officeprocessing(void *requestQueue)
         if(((reqQ_t *) requestQueue)->front == NULL) continue;
         activeThreads++;
         reqQ_node_t *node = deQueue((reqQ_t *)requestQueue);
+
+        logRequest(server_log_file, x, &node->key);
+
         tlv_reply_t reply;
         char str_pid[WIDTH_ID + 1];
         char fifo_name[USER_FIFO_PATH_LEN + 1];
@@ -177,10 +180,6 @@ void *officeprocessing(void *requestQueue)
         strcpy(fifo_name, USER_FIFO_PATH_PREFIX);
         strcat(fifo_name, str_pid);
         int user_fifo = open(fifo_name, O_WRONLY);
-        if(user_fifo == -1){
-            return (void *)RC_USR_DOWN;
-            logReply(server_log_file, pthread_self(), &reply);
-        }
         int bal = 0;
         switch (node->key.type)
         {
