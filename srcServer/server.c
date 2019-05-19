@@ -134,7 +134,7 @@ void *officeprocessing(void *requestQueue)
     //TODO: LOG BANK OFFICE OPEN & CLOSE
     int x = thread_count;
     logBankOfficeOpen(server_log_file, x, pthread_self());
-    while (!terminate){
+    while (!(terminate && ((reqQ_t *) requestQueue)->front != NULL)){
         sem_wait(&full);
         if(((reqQ_t *) requestQueue)->front == NULL && terminate) {
             sem_post(&full);
