@@ -50,6 +50,8 @@ ret_code_t create_account(req_value_t rval)
 
     if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
 
+    usleep(rval.header.op_delay_ms);
+    logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
     account_mutex_t newMut;
     if (bankaccounts[rval.create.account_id].account.hash[0] == '\0')
     {   
@@ -69,8 +71,9 @@ ret_code_t check_balance(req_value_t rval, int * ptr)
     if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
-
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
+    usleep(rval.header.op_delay_ms);
+    logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
     *ptr = bankaccounts[rval.header.account_id].account.balance;
     pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
     return RC_OK;
@@ -89,6 +92,9 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
     pthread_mutex_lock(&bankaccounts[rval.transfer.account_id].mutex);
+
+    usleep(rval.header.op_delay_ms);
+    logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
 
     if(rval.transfer.amount > bankaccounts[rval.header.account_id].account.balance) return RC_NO_FUNDS;
 
@@ -114,6 +120,9 @@ ret_code_t terminationRequest(req_value_t rval)
     else {
         terminate = true;
         for (unsigned int i = 0; i < activeThreads; i++) sem_post(&full);
+        usleep(rval.header.op_delay_ms);
+        logDelay(server_log_file, pthread_self(), rval.header.op_delay_ms);
+        //TODO: FHCMOD AO SERVER FIFO PARA BLOQUEAR PARA ESCRITA
         return RC_OK;
     }
 }
