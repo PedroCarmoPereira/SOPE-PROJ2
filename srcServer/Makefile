@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror -pedantic -g -D_REENTRAT -pthread -lrt
+CFLAGS=-Wall -Wextra -pedantic -g -D_REENTRAT -pthread -lrt
 SRCS = $(wildcard *.c) ../utils/log.c
 TARGETS = server
 

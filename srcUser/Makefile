@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror -pedantic -g
+CFLAGS=-Wall -Wextra -pedantic -g
 SRCS = $(wildcard *.c) ../utils/log.c
 TARGETS = user
 
