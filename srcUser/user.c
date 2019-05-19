@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/times.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
@@ -14,6 +15,8 @@
 int main(int argc, char *argv[])
 {
 
+    clock_t start, curr;
+    start = clock();
     if (argc != 6)
     {
         printf("Wrong number of args!\n");
@@ -159,24 +162,27 @@ int main(int argc, char *argv[])
     write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
     
     int userFifo = open(fifo_name, O_RDONLY);
-    /*int dummyFifo = open(fifo_name, O_WRONLY);
-    if (dummyFifo == -1)
-        return -2;*/
-
     int bytesRead = 0;
 
     tlv_reply_t reply;
-
+    unsigned long elapsedtime;
     do {
         bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
+        curr = clock();
+        elapsedtime = (curr - start);
         if(bytesRead){
             read(userFifo, &reply.length, sizeof(uint32_t));
             read(userFifo, &reply.value, reply.length);
         }
-    }while(!bytesRead);
+        
+    }while(!bytesRead && !(elapsedtime > FIFO_TIMEOUT_SECS));
 
     int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
-    logReply(fp, getpid(), &reply);
+    if(elapsedtime < FIFO_TIMEOUT_SECS) logReply(fp, getpid(), &reply);
+    else {
+        reply.value.header.ret_code = RC_SRV_TIMEOUT;
+        logReply(fp, getpid(), &reply);
+    }
     close(fp);
     unlink(fifo_name);
     close(serverFifo);
