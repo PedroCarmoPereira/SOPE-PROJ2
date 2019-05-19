@@ -154,6 +154,7 @@ void *officeprocessing(void *requestQueue)
         int user_fifo = open(fifo_name, O_WRONLY);
         if(user_fifo == -1){
             return (void *)RC_USR_DOWN;
+            logReply(server_log_file, pthread_self(), &reply);
         }
         int bal = 0;
         switch (node->key.type)
@@ -244,8 +245,6 @@ int main(int argc, char *argv[])
     }
 
     serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
-    if (serverFifo == -1)
-        return RC_SRV_DOWN;
 
     int dummyFifo = open(SERVER_FIFO_PATH, O_WRONLY);
     if (dummyFifo == -1)

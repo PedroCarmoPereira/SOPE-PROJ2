@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
         logReply(fp, getpid(), &reply);
         return 1;
     }
+    else logRequest(fp, getpid(), &request);
     
     int userFifo = open(fifo_name, O_RDONLY);
     int bytesRead = 0;
