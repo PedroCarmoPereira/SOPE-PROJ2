@@ -21,6 +21,7 @@ bool terminate = false;
 uint32_t activeThreads = 0;
 int server_log_file;
 int thread_count = 0;    
+int serverFifo;
 
 #define SHARED 0
 
@@ -124,7 +125,7 @@ ret_code_t terminationRequest(req_value_t rval)
         for (unsigned int i = 0; i < activeThreads; i++) sem_post(&full);
         usleep(rval.header.op_delay_ms);
         logDelay(server_log_file, pthread_self(), rval.header.op_delay_ms);
-        //TODO: FHCMOD AO SERVER FIFO PARA BLOQUEAR PARA ESCRITA
+        fchmod(serverFifo, 0600);
         return RC_OK;
     }
 }
@@ -242,7 +243,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
     if (serverFifo == -1)
         return RC_SRV_DOWN;
 

@@ -157,15 +157,20 @@ int main(int argc, char *argv[])
     request.value = req_value;
 
     int serverFifo = open(SERVER_FIFO_PATH, O_WRONLY);
-
-    write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length);
+    int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
+    tlv_reply_t reply; 
+    if(write(serverFifo, &request, sizeof(op_type_t) + sizeof(uint32_t) + request.length) <= 0){
+        reply.type = request.type;
+        reply.length = sizeof(rep_value_t);
+        reply.value.header.account_id = request.value.header.account_id;
+        reply.value.header.ret_code = RC_SRV_DOWN;
+        logReply(fp, getpid(), &reply);
+        return 1;
+    }
     
     int userFifo = open(fifo_name, O_RDONLY);
     int bytesRead = 0;
-
-    tlv_reply_t reply;
     unsigned long elapsedtime;
-    
     start = clock();
     do {
         bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
@@ -177,7 +182,6 @@ int main(int argc, char *argv[])
         elapsedtime = (curr - start)/CLOCKS_PER_SEC;
     }while(!bytesRead && !(elapsedtime > FIFO_TIMEOUT_SECS));
 
-    int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
     if(elapsedtime < FIFO_TIMEOUT_SECS) logReply(fp, getpid(), &reply);
     else {
         reply.value.header.ret_code = RC_SRV_TIMEOUT;
