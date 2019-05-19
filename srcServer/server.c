@@ -76,10 +76,12 @@ ret_code_t check_balance(req_value_t rval, int * ptr)
     if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
     *ptr = bankaccounts[rval.header.account_id].account.balance;
     pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
     return RC_OK;
 }
 
@@ -95,7 +97,8 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
     pthread_mutex_lock(&bankaccounts[rval.transfer.account_id].mutex);
-
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
 
@@ -109,6 +112,8 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
     pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
     pthread_mutex_unlock(&bankaccounts[rval.transfer.account_id].mutex);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
     return RC_OK;
 }
 
@@ -122,7 +127,12 @@ ret_code_t terminationRequest(req_value_t rval)
     
     else {
         terminate = true;
-        for (unsigned int i = 0; i < activeThreads; i++) sem_post(&full);
+        for (unsigned int i = 0; i < activeThreads; i++){ 
+            int val;
+            sem_getvalue(&full, &val);
+            logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_POST, SYNC_ROLE_CONSUMER, rval.header.pid, val);
+            sem_post(&full);
+        }
         usleep(rval.header.op_delay_ms);
         logDelay(server_log_file, pthread_self(), rval.header.op_delay_ms);
         fchmod(serverFifo, 0600);
@@ -137,9 +147,16 @@ void *officeprocessing(void *requestQueue)
     logBankOfficeOpen(server_log_file, x, pthread_self());
     while (!(terminate && ((reqQ_t *) requestQueue)->front != NULL)){
         sem_wait(&full);
+        int val;
+        sem_getvalue(&full, &val);
+        logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_WAIT, SYNC_ROLE_CONSUMER, getpid() , val);
         if(((reqQ_t *) requestQueue)->front == NULL && terminate) {
             sem_post(&full);
+            sem_getvalue(&full, &val);
+            logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_POST, SYNC_ROLE_CONSUMER, getpid() , val);
             sem_post(&empty);
+            sem_getvalue(&empty, &val);
+            logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_POST, SYNC_ROLE_CONSUMER, getpid() , val);
             break;
         }
         if(((reqQ_t *) requestQueue)->front == NULL) continue;
@@ -180,9 +197,8 @@ void *officeprocessing(void *requestQueue)
             reply.length = sizeof(rep_header_t) + sizeof(rep_shutdown_t);
             reply.type = OP_SHUTDOWN;
             reply.value.header.account_id = node->key.value.header.account_id;
-            int value;
-            sem_getvalue(&full, &value);
-            reply.value.shutdown.active_offices = value;
+            sem_getvalue(&full, &val);
+            reply.value.shutdown.active_offices = val;
             break;
         default:
             break;
@@ -196,6 +212,8 @@ void *officeprocessing(void *requestQueue)
         else logReply(server_log_file, pthread_self(), &reply);
         write(user_fifo, &reply, sizeof(op_type_t) + sizeof(uint32_t) + reply.length);
         sem_post(&empty);
+        sem_getvalue(&empty, &val);
+        logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_POST, SYNC_ROLE_CONSUMER, getpid() , val);
     }
     logBankOfficeClose(server_log_file, x, pthread_self());
     pthread_exit(0);
@@ -232,11 +250,11 @@ int main(int argc, char *argv[])
     }
 
     create_admin_acc(argv[2]);
-
-    sem_init(&empty, SHARED, atoi(argv[1]));
-    sem_init(&full, SHARED, 0);
-
     server_log_file = open(SERVER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
+    sem_init(&empty, SHARED, atoi(argv[1]));
+    logSyncMechSem(server_log_file, MAIN_THREAD_ID, SYNC_OP_SEM_INIT, SYNC_ROLE_PRODUCER, getpid(), atoi(argv[1]));
+    sem_init(&full, SHARED, 0);
+    logSyncMechSem(server_log_file, MAIN_THREAD_ID, SYNC_OP_SEM_INIT, SYNC_ROLE_PRODUCER, getpid(), 0);
     reqQ_t *requestQueue = createQueue();
 
     if (mkfifo(SERVER_FIFO_PATH, 0666) == -1)
@@ -262,12 +280,17 @@ int main(int argc, char *argv[])
         bytesRead = read(serverFifo, &request.type, sizeof(op_type_t));
         if (bytesRead > 0)
         {
+            int getVal;
             sem_wait(&empty);
+            sem_getvalue(&empty, &getVal);
+            logSyncMechSem(server_log_file, MAIN_THREAD_ID, SYNC_OP_SEM_WAIT, SYNC_ROLE_PRODUCER, getpid(),getVal);
             read(serverFifo, &request.length, sizeof(uint32_t));
             read(serverFifo, &request.value, request.length);
             logRequest(server_log_file, MAIN_THREAD_ID, &request);
             enQueue(requestQueue, request);
             sem_post(&full);
+            sem_getvalue(&full, &getVal);
+            logSyncMechSem(server_log_file, MAIN_THREAD_ID, SYNC_OP_SEM_POST, SYNC_ROLE_PRODUCER, getpid(),getVal);
         }
     } while (!terminate);
 
