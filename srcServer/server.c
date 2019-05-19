@@ -152,9 +152,6 @@ void *officeprocessing(void *requestQueue)
         strcpy(fifo_name, USER_FIFO_PATH_PREFIX);
         strcat(fifo_name, str_pid);
         int user_fifo = open(fifo_name, O_WRONLY);
-        if(user_fifo == -1){
-            return (void *)RC_USR_DOWN;
-        }
         int bal = 0;
         switch (node->key.type)
         {
@@ -192,7 +189,11 @@ void *officeprocessing(void *requestQueue)
         }
         free(node);
         activeThreads--;
-        logReply(server_log_file, pthread_self(), &reply);
+        if(user_fifo == -1){
+            reply.value.header.ret_code = RC_USR_DOWN;
+            logReply(server_log_file, pthread_self(), &reply);
+        }
+        else logReply(server_log_file, pthread_self(), &reply);
         write(user_fifo, &reply, sizeof(op_type_t) + sizeof(uint32_t) + reply.length);
         sem_post(&empty);
     }

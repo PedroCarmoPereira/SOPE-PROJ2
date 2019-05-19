@@ -86,18 +86,26 @@ int main(int argc, char *argv[])
     }
 
     if(type == OP_TRANSFER){
+        puts("0");
+        if (!args[0]) {
+            printf("The transfer op is missing the destination account id and value to be transfered");
+            return -5;
+        }
         if(strlen(args[0]) > WIDTH_ACCOUNT){
             printf("The account id's width must be at max 4 characters!\n");
             return -1;
         }
+        puts("1");
         if(strlen(args[1]) > WIDTH_BALANCE){
             printf("The amount to transfer width must be at max 10 characters!\n");
             return -1;
         }
+        puts("2");
         if(atoi(args[0]) < 1 || atoi(args[0]) >= MAX_BANK_ACCOUNTS){
             printf("The account id must be a number between 1 and 4096!\n");
             return -1;
         }
+        puts("3");
         if(atoi(args[1]) < 1 || strtoul(args[1], NULL, 10) > MAX_BALANCE){
             printf("The amount to transfer must be a number between 1 and 1000000000!\n");
             return -1;
