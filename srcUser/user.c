@@ -109,6 +109,12 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
+    else{
+        if(strlen(argv[5]) == 0){
+            printf("This operation requires arguments!\n");
+            return -1;
+        }
+    }
     
 
     tlv_request_t request;

@@ -47,9 +47,9 @@ void saltGenerator(char *salt)
 ret_code_t create_account(req_value_t rval)
 {
 
-    if (rval.header.account_id != ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
-
     if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
+
+    if (rval.header.account_id != ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
@@ -68,10 +68,11 @@ ret_code_t create_account(req_value_t rval)
 }
 
 ret_code_t check_balance(req_value_t rval, int * ptr)
-{
+{   
+    if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
+
     if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
-    if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
@@ -82,12 +83,11 @@ ret_code_t check_balance(req_value_t rval, int * ptr)
 
 ret_code_t transfer_operation(req_value_t rval, int * ptr)
 {
-
-    if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
-
     if (!verifyAccount(rval.header.account_id, rval.header.password)) return RC_LOGIN_FAIL;
 
     if(rval.transfer.account_id == rval.header.account_id) return RC_SAME_ID;
+
+    if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     if (bankaccounts[rval.transfer.account_id].account.hash[0] == '\0') return RC_ID_NOT_FOUND;
 
@@ -112,11 +112,11 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
 ret_code_t terminationRequest(req_value_t rval)
 {
-    if (rval.header.account_id != ADMIN_ACCOUNT_ID)
-        return RC_OP_NALLOW;
-
     if (!verifyAccount(rval.header.account_id, rval.header.password))
         return RC_LOGIN_FAIL;
+
+    if (rval.header.account_id != ADMIN_ACCOUNT_ID)
+        return RC_OP_NALLOW;
     
     else {
         terminate = true;
@@ -150,6 +150,9 @@ void *officeprocessing(void *requestQueue)
         strcpy(fifo_name, USER_FIFO_PATH_PREFIX);
         strcat(fifo_name, str_pid);
         int user_fifo = open(fifo_name, O_WRONLY);
+        if(user_fifo == -1){
+            return (void *)RC_USR_DOWN;
+        }
         int bal = 0;
         switch (node->key.type)
         {
@@ -235,12 +238,12 @@ int main(int argc, char *argv[])
 
     if (mkfifo(SERVER_FIFO_PATH, 0666) == -1)
     {
-        exit(8);
+        return -1;
     }
 
     int serverFifo = open(SERVER_FIFO_PATH, O_RDONLY | O_NONBLOCK);
     if (serverFifo == -1)
-        return -1;
+        return RC_SRV_DOWN;
 
     int dummyFifo = open(SERVER_FIFO_PATH, O_WRONLY);
     if (dummyFifo == -1)
