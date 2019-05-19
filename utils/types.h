@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <unistd.h>
+#include <pthread.h>
 
 #include "constants.h"
 
@@ -64,7 +65,6 @@ typedef struct account_mutex{
   bank_account_t account;
   pthread_mutex_t mutex;
 } account_mutex_t;
-
 
 //
 //

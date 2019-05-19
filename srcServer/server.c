@@ -20,6 +20,7 @@ sem_t full, empty;
 bool terminate = false;
 uint32_t activeThreads = 0;
 int server_log_file;
+int thread_count = 0;    
 
 #define SHARED 0
 
@@ -129,6 +130,9 @@ ret_code_t terminationRequest(req_value_t rval)
 
 void *officeprocessing(void *requestQueue)
 {
+    //TODO: LOG BANK OFFICE OPEN & CLOSE
+    int x = thread_count;
+    logBankOfficeOpen(server_log_file, x, pthread_self());
     while (!terminate){
         sem_wait(&full);
         if(((reqQ_t *) requestQueue)->front == NULL && terminate) {
@@ -187,6 +191,7 @@ void *officeprocessing(void *requestQueue)
         write(user_fifo, &reply, sizeof(op_type_t) + sizeof(uint32_t) + reply.length);
         sem_post(&empty);
     }
+    logBankOfficeClose(server_log_file, x, pthread_self());
     pthread_exit(0);
 }
 
@@ -242,7 +247,7 @@ int main(int argc, char *argv[])
         return -2;
 
 
-    for(int i = 0; i <= atoi(argv[1]); i++) pthread_create(&bankoffice[i], NULL, officeprocessing, requestQueue);
+    for(thread_count = 0; thread_count <= atoi(argv[1]); thread_count++) pthread_create(&bankoffice[thread_count], NULL, officeprocessing, requestQueue);
     tlv_request_t request;
     request.type = 0;
     do
@@ -260,7 +265,7 @@ int main(int argc, char *argv[])
         }
     } while (!terminate);
 
-    for(int i = 0; i <= atoi(argv[1]); i++) pthread_join(bankoffice[i], NULL);
+    for(int i = 0; i <= server_log_file; i++) pthread_join(bankoffice[i], NULL);
     close(serverFifo);
     close(dummyFifo);
     unlink(SERVER_FIFO_PATH);
