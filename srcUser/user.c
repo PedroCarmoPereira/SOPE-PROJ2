@@ -16,7 +16,6 @@ int main(int argc, char *argv[])
 {
 
     clock_t start, curr;
-    start = clock();
     if (argc != 6)
     {
         printf("Wrong number of args!\n");
@@ -166,15 +165,16 @@ int main(int argc, char *argv[])
 
     tlv_reply_t reply;
     unsigned long elapsedtime;
+    
+    start = clock();
     do {
         bytesRead  = read(userFifo, &reply.type, sizeof(op_type_t));
-        curr = clock();
-        elapsedtime = (curr - start);
         if(bytesRead){
             read(userFifo, &reply.length, sizeof(uint32_t));
             read(userFifo, &reply.value, reply.length);
         }
-        
+        curr = clock();
+        elapsedtime = (curr - start)/CLOCKS_PER_SEC;
     }while(!bytesRead && !(elapsedtime > FIFO_TIMEOUT_SECS));
 
     int fp = open(USER_LOGFILE, O_CREAT | O_WRONLY | O_APPEND, 0666);
