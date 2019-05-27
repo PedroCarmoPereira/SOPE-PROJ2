@@ -15,6 +15,7 @@
 #include "sope.h"
 
 pthread_t bankoffice[MAX_BANK_OFFICES];
+pthread_mutex_t mutex_queue;
 account_mutex_t bankaccounts[MAX_BANK_ACCOUNTS];
 sem_t full, empty;
 bool terminate = false;
@@ -76,12 +77,12 @@ ret_code_t check_balance(req_value_t rval, int * ptr)
     if (rval.header.account_id == ADMIN_ACCOUNT_ID) return RC_OP_NALLOW;
 
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
     *ptr = bankaccounts[rval.header.account_id].account.balance;
     pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
     return RC_OK;
 }
 
@@ -97,8 +98,8 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
     pthread_mutex_lock(&bankaccounts[rval.header.account_id].mutex);
     pthread_mutex_lock(&bankaccounts[rval.transfer.account_id].mutex);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
     usleep(rval.header.op_delay_ms);
     logSyncDelay(server_log_file, pthread_self(), rval.header.account_id, rval.header.op_delay_ms);
 
@@ -120,8 +121,8 @@ ret_code_t transfer_operation(req_value_t rval, int * ptr)
 
     pthread_mutex_unlock(&bankaccounts[rval.header.account_id].mutex);
     pthread_mutex_unlock(&bankaccounts[rval.transfer.account_id].mutex);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
-    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
+    logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_ACCOUNT, rval.header.pid);
     return RC_OK;
 }
 
@@ -166,11 +167,18 @@ void *officeprocessing(void *requestQueue)
             logSyncMechSem(server_log_file, pthread_self(), SYNC_OP_SEM_POST, SYNC_ROLE_CONSUMER, getpid() , val);
             break;
         }
+
+        pthread_mutex_lock(&mutex_queue);
+        logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_CONSUMER, getpid()); // HERE??
+
         if(((reqQ_t *) requestQueue)->front == NULL) continue;
         activeThreads++;
         reqQ_node_t *node = deQueue((reqQ_t *)requestQueue);
 
         logRequest(server_log_file, x, &node->key);
+
+        pthread_mutex_unlock(&mutex_queue);
+        logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_CONSUMER, getpid());  // HERE??
 
         tlv_reply_t reply;
         char str_pid[WIDTH_ID + 1];
@@ -278,6 +286,7 @@ int main(int argc, char *argv[])
     if (dummyFifo == -1)
         return -2;
 
+    pthread_mutex_init(&mutex_queue, NULL);  
 
     for(thread_count = 0; thread_count <= atoi(argv[1]); thread_count++) pthread_create(&bankoffice[thread_count], NULL, officeprocessing, requestQueue);
     tlv_request_t request;
@@ -295,7 +304,15 @@ int main(int argc, char *argv[])
             read(serverFifo, &request.length, sizeof(uint32_t));
             read(serverFifo, &request.value, request.length);
             logRequest(server_log_file, MAIN_THREAD_ID, &request);
+
+            pthread_mutex_lock(&mutex_queue);
+            logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_LOCK, SYNC_ROLE_PRODUCER, getpid()); // HERE??
+
             enQueue(requestQueue, request);
+
+            pthread_mutex_unlock(&mutex_queue);
+            logSyncMech(server_log_file, pthread_self(), SYNC_OP_MUTEX_UNLOCK, SYNC_ROLE_PRODUCER, getpid()); // HERE??
+
             sem_post(&full);
             sem_getvalue(&full, &getVal);
             logSyncMechSem(server_log_file, MAIN_THREAD_ID, SYNC_OP_SEM_POST, SYNC_ROLE_PRODUCER, getpid(),getVal);
